@@ -9,7 +9,7 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - name: Make IPs stable
-        if: ${{ 1 == 1 }}
+        if: ${{ 0 == 1 }} # Disabled
         shell: bash
         run: |
           make_ip_static() {
