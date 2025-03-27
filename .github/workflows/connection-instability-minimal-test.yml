@@ -6,10 +6,10 @@ on:
 jobs:
   connection-reset-test:
     name: "Connection instability minimal test"
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-20.04
     steps:
       - name: Make IPs stable
-        if: ${{ 1 == 1 }} # Enabled
+        if: ${{ 0 == 1 }} # Disabled
         shell: bash
         run: |
           make_ip_static() {
