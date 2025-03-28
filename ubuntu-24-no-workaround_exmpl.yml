@@ -1,0 +1,73 @@
+name: No Workaround - ubuntu24.04
+
+on:
+  workflow_dispatch:
+
+jobs:
+  connection-reset-test:
+    name: "No workaround Build on ubuntu-24.04"
+    
+    runs-on: ubuntu-24.04
+
+    steps:
+      - name: Make IPs stable
+        if: ${{ 0 == 1 }} # Disabled
+        shell: bash
+        run: |
+          make_ip_static() {
+              local hostname="$1"
+              local IP
+
+              while true; do
+                  IP=$(host "$hostname" | awk '/has address/ { print $4; exit }')
+
+                  if [ -z "$IP" ]; then
+                      echo "No IP address found for $hostname"
+                  else
+                      # Remove existing entry for the hostname
+                      sudo sed -i "/$hostname/d" /etc/hosts
+
+                      # Add updated IP and hostname to /etc/hosts
+                      echo "$IP $hostname" | sudo tee -a /etc/hosts > /dev/null
+                  fi
+
+                  # Sleep for 5 minutes
+                  sleep 300
+                  wait
+              done &
+          }
+
+          make_ip_static stagingapi.dnanexus.com
+
+      - name: Run client_openssl_minimal.sh
+        shell: bash
+        run: |
+          echo "running..."
+          
+          for i in {1..150}
+          do
+            curl -v --insecure --connect-timeout 30 --max-time 30 "https://stagingapi.dnanexus.com/" 1>"out-$i.txt" 2>&1 & 
+          done
+            
+          echo "sleeping..."
+          sleep 75
+          
+          error_count=0
+          for i in {1..150}
+          do
+            if ! grep -q "<html><head>" "out-$i.txt"; then
+              error_count=$((error_count+1))
+              echo "Request $i did not end correctly:"
+              echo "<<<<< ------ >>>>>"
+              cat "out-$i.txt"
+              echo "<<<<< ------ >>>>>"
+              echo ""
+            fi
+          done
+          
+          if [ $error_count -gt 0 ]; then
+            echo "There were $error_count requests that did not end correctly"
+            exit 1
+          else
+            echo "All requests ended correctly"
+          fi
