@@ -5,11 +5,11 @@ on:
 
 jobs:
   connection-reset-test:
-  name: "Connection instability openssl test  - With Workaround"
-  strategy:
+    name: "Connection instability openssl test  - With Workaround"
+    strategy:
       matrix:
         ubuntu_version: ['ubuntu-20.04', 'ubuntu-22.04', 'ubuntu-24.04']
-  runs-on: ${{ matrix.ubuntu_version }}
+    runs-on: ${{ matrix.ubuntu_version }}
     steps:
       - name: Make IPs stable
         if: ${{ 1 == 1 }} # Enabled
