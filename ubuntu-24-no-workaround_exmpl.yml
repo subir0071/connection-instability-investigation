@@ -1,11 +1,11 @@
-name: No Workaround - ubuntu24.04
+name: Example No Workaround - ubuntu24.04
 
 on:
   workflow_dispatch:
 
 jobs:
   connection-reset-test:
-    name: "No workaround Build on ubuntu-24.04"
+    name: "Example No workaround Build on ubuntu-24.04"
     
     runs-on: ubuntu-24.04
 
@@ -46,7 +46,7 @@ jobs:
           
           for i in {1..150}
           do
-            curl -v --insecure --connect-timeout 30 --max-time 30 "https://stagingapi.dnanexus.com/" 1>"out-$i.txt" 2>&1 & 
+            curl -v --insecure --connect-timeout 30 --max-time 30 "https://example.com/" 1>"out-$i.txt" 2>&1 & 
           done
             
           echo "sleeping..."
