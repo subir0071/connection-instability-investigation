@@ -1,11 +1,11 @@
-name: Connection instability minimal test
+name: Connection instability minimal test - No Workaround
 
 on:
   workflow_dispatch:
 
 jobs:
   connection-reset-test:
-    name: "Connection instability minimal test"
+    name: "Connection instability minimal test - No workaround"
     strategy:
       matrix:
         ubuntu_version: ['ubuntu-20.04', 'ubuntu-22.04', 'ubuntu-24.04']
