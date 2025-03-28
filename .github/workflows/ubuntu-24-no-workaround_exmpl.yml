@@ -55,7 +55,7 @@ jobs:
           error_count=0
           for i in {1..150}
           do
-            if ! grep -q "<html><head>" "out-$i.txt"; then
+            if ! grep -q "<!doctype html>" "out-$i.txt"; then
               error_count=$((error_count+1))
               echo "Request $i did not end correctly:"
               echo "<<<<< ------ >>>>>"
