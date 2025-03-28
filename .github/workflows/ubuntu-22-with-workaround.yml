@@ -1,0 +1,85 @@
+name: With Workaround ubuntu2204
+
+on:
+  workflow_dispatch:
+
+jobs:
+  connection-reset-test:
+    name: "With Workaround Build on ubuntu-22.04"
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Make IPs stable
+        if: ${{ 1 == 1 }} # Enabled
+        shell: bash
+        run: |
+          make_ip_static() {
+              local hostname="$1"
+              local IP
+
+              while true; do
+                  IP=$(host "$hostname" | awk '/has address/ { print $4; exit }')
+
+                  if [ -z "$IP" ]; then
+                      echo "No IP address found for $hostname"
+                  else
+                      # Remove existing entry for the hostname
+                      sudo sed -i "/$hostname/d" /etc/hosts
+
+                      # Add updated IP and hostname to /etc/hosts
+                      echo "$IP $hostname" | sudo tee -a /etc/hosts > /dev/null
+                  fi
+
+                  # Sleep for 5 minutes
+                  sleep 300
+                  wait
+              done &
+          }
+
+          make_ip_static stagingapi.dnanexus.com
+
+      - name: Run client_openssl_minimal.sh
+        shell: bash
+        run: |
+          echo "running..."
+          
+          for i in {1..150}
+          do
+            timeout 60 bash -c \
+              '( printf "POST / HTTP/1.1\n" ; \
+                  printf "Host: %s\n" "stagingapi.dnanexus.com"; \
+                  printf "Connection: close\n" ; \
+                  printf "Content-Length: 2\n" ; \
+                  printf "Content-Type: application/json\r\n\r\n" ; \
+                  printf "{}\n" ; \
+                  sleep 15 ) | \
+                openssl s_client \
+                  -verify_return_error \
+                  -verify_quiet \
+                  -connect stagingapi.dnanexus.com:443 \
+                  -servername stagingapi.dnanexus.com \
+              ' 1> "out-$i.txt" 2>&1 \
+              || echo "Timeout of 60 seconds reached" >> "out-$i.txt" &
+          done
+          
+          echo "sleeping..."
+          sleep 75
+          
+          error_count=0
+          for i in {1..150}
+          do
+            if ! grep -q "The specified URL could not be found" "out-$i.txt"; then
+              error_count=$((error_count+1))
+              echo "Request $i did not end correctly:"
+              echo "<<<<< ------ >>>>>"
+              cat "out-$i.txt"
+              echo "<<<<< ------ >>>>>"
+              echo ""
+            fi
+          done
+          
+          if [ $error_count -gt 0 ]; then
+            echo "There were $error_count requests that did not end correctly"
+            exit 1
+          else
+            echo "All requests ended correctly"
+          fi

@@ -1,19 +1,15 @@
-name: Connection instability minimal test - No Workaround
+name: With Workaround ubuntu20.04
 
 on:
   workflow_dispatch:
 
 jobs:
   connection-reset-test:
-    name: "No workaround Build on ${{ matrix.ubuntu_version }}"
-    strategy:
-      matrix:
-        ubuntu_version: ['ubuntu-20.04', 'ubuntu-22.04', 'ubuntu-24.04']
-    runs-on: ${{ matrix.ubuntu_version }}
-
+    name: "With Workaround Build on ubuntu-20.04"
+    runs-on: ubuntu-20.04
     steps:
       - name: Make IPs stable
-        if: ${{ 0 == 1 }} # Disabled
+        if: ${{ 1 == 1 }} # Enabled
         shell: bash
         run: |
           make_ip_static() {
@@ -48,16 +44,30 @@ jobs:
           
           for i in {1..150}
           do
-            curl -v --insecure --connect-timeout 30 --max-time 30 "https://stagingapi.dnanexus.com/" 1>"out-$i.txt" 2>&1 & 
+            timeout 60 bash -c \
+              '( printf "POST / HTTP/1.1\n" ; \
+                  printf "Host: %s\n" "stagingapi.dnanexus.com"; \
+                  printf "Connection: close\n" ; \
+                  printf "Content-Length: 2\n" ; \
+                  printf "Content-Type: application/json\r\n\r\n" ; \
+                  printf "{}\n" ; \
+                  sleep 15 ) | \
+                openssl s_client \
+                  -verify_return_error \
+                  -verify_quiet \
+                  -connect stagingapi.dnanexus.com:443 \
+                  -servername stagingapi.dnanexus.com \
+              ' 1> "out-$i.txt" 2>&1 \
+              || echo "Timeout of 60 seconds reached" >> "out-$i.txt" &
           done
-            
+          
           echo "sleeping..."
           sleep 75
           
           error_count=0
           for i in {1..150}
           do
-            if ! grep -q "<html><head>" "out-$i.txt"; then
+            if ! grep -q "The specified URL could not be found" "out-$i.txt"; then
               error_count=$((error_count+1))
               echo "Request $i did not end correctly:"
               echo "<<<<< ------ >>>>>"
